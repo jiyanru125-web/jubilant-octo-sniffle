@@ -1,5 +1,5 @@
--- 雅思双人监督局 Supabase 数据库结构
--- 使用方法：打开 Supabase 项目 → SQL Editor → New query → 粘贴本文件 → Run
+-- 雅思双人监督局 Supabase 数据库结构（兼容版）
+-- 使用方法：Supabase 项目 → SQL Editor → New query → 粘贴本文件 → Run
 
 create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
@@ -17,55 +17,60 @@ create table if not exists public.tasks (
 create index if not exists tasks_task_date_idx on public.tasks(task_date);
 create index if not exists tasks_player_name_idx on public.tasks(player_name);
 
--- 让前端 anon key 可以读写任务表。
--- 这个网站目前只给你们两个人使用，先用开放策略简化上线。
--- 之后如果要加登录，再把策略改成按用户限制。
 alter table public.tasks enable row level security;
 
 drop policy if exists "Anyone can read tasks" on public.tasks;
 create policy "Anyone can read tasks"
 on public.tasks for select
+to anon, authenticated
 using (true);
 
 drop policy if exists "Anyone can insert tasks" on public.tasks;
 create policy "Anyone can insert tasks"
 on public.tasks for insert
+to anon, authenticated
 with check (true);
 
 drop policy if exists "Anyone can update tasks" on public.tasks;
 create policy "Anyone can update tasks"
 on public.tasks for update
+to anon, authenticated
 using (true)
 with check (true);
 
 drop policy if exists "Anyone can delete tasks" on public.tasks;
 create policy "Anyone can delete tasks"
 on public.tasks for delete
+to anon, authenticated
 using (true);
 
--- 照片证据存储桶：task-proofs
--- 注意：Storage bucket 需要在 Supabase Dashboard 里手动创建：
--- Storage → New bucket → Name: task-proofs → Public bucket: ON
-
--- 如果你想用 SQL 创建 public bucket，也可以运行下面这句：
+-- 创建照片证据存储桶：task-proofs
 insert into storage.buckets (id, name, public)
 values ('task-proofs', 'task-proofs', true)
 on conflict (id) do update set public = true;
 
--- Storage 读写策略
-create policy if not exists "Anyone can read task proof files"
+-- Storage 读写策略：Postgres 不支持 create policy if not exists，所以先 drop 再 create。
+drop policy if exists "Anyone can read task proof files" on storage.objects;
+create policy "Anyone can read task proof files"
 on storage.objects for select
+to anon, authenticated
 using (bucket_id = 'task-proofs');
 
-create policy if not exists "Anyone can upload task proof files"
+drop policy if exists "Anyone can upload task proof files" on storage.objects;
+create policy "Anyone can upload task proof files"
 on storage.objects for insert
+to anon, authenticated
 with check (bucket_id = 'task-proofs');
 
-create policy if not exists "Anyone can update task proof files"
+drop policy if exists "Anyone can update task proof files" on storage.objects;
+create policy "Anyone can update task proof files"
 on storage.objects for update
+to anon, authenticated
 using (bucket_id = 'task-proofs')
 with check (bucket_id = 'task-proofs');
 
-create policy if not exists "Anyone can delete task proof files"
+drop policy if exists "Anyone can delete task proof files" on storage.objects;
+create policy "Anyone can delete task proof files"
 on storage.objects for delete
+to anon, authenticated
 using (bucket_id = 'task-proofs');
