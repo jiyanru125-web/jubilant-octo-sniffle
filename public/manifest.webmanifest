@@ -1,0 +1,18 @@
+{
+  "name": "雅思监督局",
+  "short_name": "雅思监督局",
+  "description": "纪沿如和李姝娴的 IELTS 7.0 双人监督网站",
+  "start_url": "/jubilant-octo-sniffle/",
+  "scope": "/jubilant-octo-sniffle/",
+  "display": "standalone",
+  "background_color": "#f8fbff",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/jubilant-octo-sniffle/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
