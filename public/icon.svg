@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7dd3fc"/>
+      <stop offset="52%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#f9a8d4"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0f172a" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <circle cx="150" cy="156" r="62" fill="#ffffff" opacity="0.9"/>
+  <circle cx="362" cy="156" r="62" fill="#ffffff" opacity="0.9"/>
+  <text x="150" y="176" font-size="72" text-anchor="middle">🦊</text>
+  <text x="362" y="176" font-size="72" text-anchor="middle">🐰</text>
+  <rect x="82" y="244" width="348" height="150" rx="42" fill="#0f172a" filter="url(#shadow)"/>
+  <text x="256" y="310" font-family="Arial, 'Noto Sans SC', sans-serif" font-size="48" font-weight="900" text-anchor="middle" fill="#ffffff">IELTS</text>
+  <text x="256" y="360" font-family="Arial, 'Noto Sans SC', sans-serif" font-size="34" font-weight="900" text-anchor="middle" fill="#fde68a">监督局</text>
+</svg>
