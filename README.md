@@ -4,3 +4,5 @@
 
 访问地址：
 https://jiyanru125-web.github.io/jubilant-octo-sniffle/
+
+已接入 Supabase 数据库，用于同步每日任务和学习证据。
