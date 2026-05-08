@@ -143,7 +143,7 @@ function TaskBoard({ player, tasks, draft, isEditing, selectedIds, onDraftChange
       </div>
       <div className="relative mt-5"><ProgressBar value={percent} /></div>
       <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-slate-50 p-3">
-        <div><p className="text-sm font-black text-slate-900">{isEditing ? '正在编辑任务' : '普通模式'}</p><p className="text-xs font-bold text-slate-500">{isEditing ? '可以新增、修改、选择后删除' : '点击相机上传照片，上传后才算完成'}</p></div>
+        <div><p className="text-sm font-black text-slate-900">{isEditing ? '正在编辑任务' : '普通模式'}</p><p className="text-xs font-bold text-slate-500">{isEditing ? '可以新增、修改、选择后删除' : '点击相机，可从相册选择照片，也可以直接拍照'}</p></div>
         <div className="flex flex-wrap gap-2">
           {isEditing && <button onClick={() => onDeleteSelected(player.name)} disabled={!selectedIds.length} className="rounded-2xl bg-rose-100 px-4 py-3 text-sm font-black text-rose-600 disabled:opacity-40">删除已选 {selectedIds.length ? `(${selectedIds.length})` : ''}</button>}
           <button onClick={() => onToggleEdit(player.name)} className={cn('rounded-2xl px-5 py-3 text-sm font-black transition', isEditing ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-white')}>{isEditing ? '完成' : '编辑'}</button>
@@ -166,7 +166,7 @@ function TaskBoard({ player, tasks, draft, isEditing, selectedIds, onDraftChange
                 ) : task.proofName ? (
                   <button onClick={() => onViewProof(player.name, task)} className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-emerald-100 text-xl font-black text-emerald-600">{task.proofUrl ? <img src={task.proofUrl} alt="学习证据" className="h-full w-full object-cover" /> : '✓'}</button>
                 ) : (
-                  <label className="grid h-12 w-12 shrink-0 cursor-pointer place-items-center rounded-2xl bg-yellow-100 text-xl font-black text-amber-600">📷<input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onUploadProof(player.name, task.id, e.target.files && e.target.files[0])} /></label>
+                  <label className="grid h-12 w-12 shrink-0 cursor-pointer place-items-center rounded-2xl bg-yellow-100 text-xl font-black text-amber-600" title="点击后可从相册选择照片，也可以直接拍照">📷<input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadProof(player.name, task.id, e.target.files && e.target.files[0])} /></label>
                 )}
                 <div className="min-w-0 flex-1">
                   <input value={task.title} readOnly={!isEditing} onChange={(e) => onEditTask(player.name, task.id, e.target.value)} className={cn('w-full rounded-xl px-3 py-2 text-base font-black text-slate-900 outline-none', isEditing ? 'bg-white focus:ring-2 focus:ring-sky-200' : 'bg-transparent cursor-default', task.done && !isEditing ? 'line-through decoration-2 opacity-60' : '')} />
