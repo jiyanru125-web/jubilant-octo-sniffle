@@ -10,14 +10,34 @@ const makeEmptyTasks = () => ({ 纪沿如: [], 李姝娴: [] });
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const cn = (...items) => items.filter(Boolean).join(' ');
 
+function parseMaybeList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [value];
+  } catch {
+    return String(value).split('、').filter(Boolean);
+  }
+}
+
+function proofSummary(names) {
+  if (!names.length) return '';
+  return names.length === 1 ? names[0] : `${names.length} 张照片`;
+}
+
 function toTask(row) {
+  const proofNames = parseMaybeList(row.proof_name);
+  const proofUrls = parseMaybeList(row.proof_url);
   return {
     id: row.id,
     title: row.title,
     reward: row.reward || 'Custom +1',
     done: Boolean(row.done),
-    proofName: row.proof_name || '',
-    proofUrl: row.proof_url || '',
+    proofName: proofSummary(proofNames),
+    proofUrl: proofUrls[0] || '',
+    proofNames,
+    proofUrls,
   };
 }
 
@@ -126,7 +146,7 @@ function TaskBoard({ player, tasks, draft, isEditing, selectedIds, onDraftChange
       </div>
       <div className="relative mt-5"><ProgressBar value={percent} /></div>
       <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-slate-50 p-3">
-        <div><p className="text-sm font-black text-slate-900">{isEditing ? '正在编辑任务' : '普通模式'}</p><p className="text-xs font-bold text-slate-500">{isEditing ? '可以新增、修改、选择后删除' : '点击相机，可从相册选择照片，也可以直接拍照；上传后自动打卡'}</p></div>
+        <div><p className="text-sm font-black text-slate-900">{isEditing ? '正在编辑任务' : '普通模式'}</p><p className="text-xs font-bold text-slate-500">{isEditing ? '可以新增、修改、选择后删除' : '点击相机，可从相册一次选择多张照片；上传后自动打卡'}</p></div>
         <div className="flex flex-wrap gap-2">
           {isEditing && <button onClick={() => onDeleteSelected(player.name)} disabled={!selectedIds.length} className="rounded-2xl bg-rose-100 px-4 py-3 text-sm font-black text-rose-600 disabled:opacity-40">删除已选 {selectedIds.length ? `(${selectedIds.length})` : ''}</button>}
           <button onClick={() => onToggleEdit(player.name)} className={cn('rounded-2xl px-5 py-3 text-sm font-black', isEditing ? 'bg-emerald-500 text-white' : 'bg-slate-900 text-white')}>{isEditing ? '完成' : '编辑'}</button>
@@ -149,7 +169,7 @@ function TaskBoard({ player, tasks, draft, isEditing, selectedIds, onDraftChange
                 ) : task.proofName ? (
                   <button onClick={() => onViewProof(player.name, task)} className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-emerald-100 text-xl font-black text-emerald-600">{task.proofUrl ? <img src={task.proofUrl} alt="学习证据" className="h-full w-full object-cover" /> : '✓'}</button>
                 ) : (
-                  <label className="grid h-12 w-12 shrink-0 cursor-pointer place-items-center rounded-2xl bg-yellow-100 text-xl font-black text-amber-600" title="上传后自动打卡成功">📷<input type="file" accept="image/*" className="hidden" onChange={(event) => { const file = event.target.files && event.target.files[0]; onUploadProof(player.name, task.id, file); event.target.value = ''; }} /></label>
+                  <label className="grid h-12 w-12 shrink-0 cursor-pointer place-items-center rounded-2xl bg-yellow-100 text-xl font-black text-amber-600" title="可一次选择多张照片，上传后自动打卡成功">📷<input type="file" accept="image/*" multiple className="hidden" onChange={(event) => { const files = Array.from(event.target.files || []); onUploadProof(player.name, task.id, files); event.target.value = ''; }} /></label>
                 )}
                 <div className="min-w-0 flex-1">
                   <input value={task.title} readOnly={!isEditing} onChange={(e) => onEditTask(player.name, task.id, e.target.value)} className={cn('w-full rounded-xl px-3 py-2 text-base font-black text-slate-900 outline-none', isEditing ? 'bg-white focus:ring-2 focus:ring-sky-200' : 'bg-transparent cursor-default', task.done && !isEditing ? 'line-through decoration-2 opacity-60' : '')} />
@@ -206,7 +226,7 @@ export default function IELTSBattleRoom() {
   async function addTask(playerName) {
     const title = taskDrafts[playerName].trim();
     if (!title) return;
-    const tempTask = { id: `temp-${Date.now()}`, title, reward: 'Custom +1', done: false, proofName: '', proofUrl: '' };
+    const tempTask = { id: `temp-${Date.now()}`, title, reward: 'Custom +1', done: false, proofName: '', proofUrl: '', proofNames: [], proofUrls: [] };
     setTaskLists((current) => ({ ...current, [playerName]: [...(current[playerName] || []), tempTask] }));
     setTaskDrafts((current) => ({ ...current, [playerName]: '' }));
 
@@ -216,40 +236,46 @@ export default function IELTSBattleRoom() {
     await loadTasks();
   }
 
-  async function uploadTaskProof(playerName, taskId, file) {
-    if (!file) return;
-    const localUrl = URL.createObjectURL(file);
+  async function uploadTaskProof(playerName, taskId, inputFiles) {
+    const files = Array.isArray(inputFiles) ? inputFiles : inputFiles ? [inputFiles] : [];
+    if (!files.length) return;
+    const localUrls = files.map((file) => URL.createObjectURL(file));
+    const names = files.map((file) => file.name);
     const taskTitle = (taskLists[playerName] || []).find((task) => task.id === taskId)?.title || '学习任务';
+    const summary = proofSummary(names);
 
-    updateLocalTask(playerName, taskId, (task) => ({ ...task, done: true, proofName: file.name, proofUrl: localUrl }));
-    setProofPreview({ playerName, taskTitle, proofName: file.name, proofUrl: localUrl });
-    setStatusMessage('已本地打卡成功，正在把照片同步到 Supabase...');
+    updateLocalTask(playerName, taskId, (task) => ({ ...task, done: true, proofName: summary, proofUrl: localUrls[0], proofNames: names, proofUrls: localUrls }));
+    setProofPreview({ playerName, taskTitle, proofName: summary, proofNames: names, proofUrl: localUrls[0], proofUrls: localUrls });
+    setStatusMessage(`已本地打卡成功，正在同步 ${files.length} 张照片到 Supabase...`);
 
     if (!isSupabaseConfigured || String(taskId).startsWith('temp-')) return;
 
-    const path = `${todayKey()}/${playerName}/${taskId}-${Date.now()}-${file.name}`;
-    const upload = await supabase.storage.from('task-proofs').upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
-    if (upload.error) {
-      setStatusMessage(`本地已打卡，但照片同步失败：${upload.error.message}`);
-      return;
+    const uploadedUrls = [];
+    for (const file of files) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${todayKey()}/${playerName}/${taskId}-${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`;
+      const upload = await supabase.storage.from('task-proofs').upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+      if (upload.error) {
+        setStatusMessage(`本地已打卡，但有照片同步失败：${upload.error.message}`);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from('task-proofs').getPublicUrl(path);
+      uploadedUrls.push(urlData.publicUrl);
     }
 
-    const { data: urlData } = supabase.storage.from('task-proofs').getPublicUrl(path);
-    const publicUrl = urlData.publicUrl;
-    updateLocalTask(playerName, taskId, (task) => ({ ...task, proofUrl: publicUrl }));
-
-    const { error } = await supabase.from('tasks').update({ done: true, proof_name: file.name, proof_url: publicUrl, updated_at: new Date().toISOString() }).eq('id', taskId);
+    updateLocalTask(playerName, taskId, (task) => ({ ...task, proofUrl: uploadedUrls[0], proofUrls: uploadedUrls }));
+    const { error } = await supabase.from('tasks').update({ done: true, proof_name: JSON.stringify(names), proof_url: JSON.stringify(uploadedUrls), updated_at: new Date().toISOString() }).eq('id', taskId);
     if (error) {
       setStatusMessage(`本地已打卡，但数据库同步失败：${error.message}`);
       return;
     }
 
-    setStatusMessage('照片已上传，打卡成功，首页完成度已同步。');
+    setStatusMessage(`${files.length} 张照片已上传，打卡成功，首页完成度已同步。`);
     await loadTasks();
   }
 
   async function clearTaskProof(playerName, taskId) {
-    updateLocalTask(playerName, taskId, (task) => ({ ...task, done: false, proofName: '', proofUrl: '' }));
+    updateLocalTask(playerName, taskId, (task) => ({ ...task, done: false, proofName: '', proofUrl: '', proofNames: [], proofUrls: [] }));
     if (isSupabaseConfigured && !String(taskId).startsWith('temp-')) {
       await supabase.from('tasks').update({ done: false, proof_name: null, proof_url: null, updated_at: new Date().toISOString() }).eq('id', taskId);
       await loadTasks();
@@ -264,7 +290,14 @@ export default function IELTSBattleRoom() {
   }
 
   function viewTaskProof(playerName, task) {
-    setProofPreview({ playerName, taskTitle: task.title, proofName: task.proofName, proofUrl: task.proofUrl || '' });
+    setProofPreview({
+      playerName,
+      taskTitle: task.title,
+      proofName: task.proofName,
+      proofNames: task.proofNames || (task.proofName ? [task.proofName] : []),
+      proofUrl: task.proofUrl || '',
+      proofUrls: task.proofUrls || (task.proofUrl ? [task.proofUrl] : []),
+    });
   }
 
   function toggleEditTasks(playerName) {
@@ -315,7 +348,7 @@ export default function IELTSBattleRoom() {
       <div className="mx-auto max-w-7xl">
         <header className="relative overflow-hidden rounded-[2.5rem] border border-white bg-white/70 p-6 shadow-2xl shadow-sky-100 backdrop-blur md:p-8">
           <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div><div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-lg">⚡ IELTS Duo Battle Room</div><h1 className="text-4xl font-black tracking-tight text-slate-900 md:text-6xl">雅思双人监督局</h1><p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-600 md:text-lg">上传照片后自动打卡，并实时同步首页完成度。</p></div>
+            <div><div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-lg">⚡ IELTS Duo Battle Room</div><h1 className="text-4xl font-black tracking-tight text-slate-900 md:text-6xl">雅思双人监督局</h1><p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-slate-600 md:text-lg">上传一张或多张照片后自动打卡，并实时同步首页完成度。</p></div>
             <div className="rounded-[2rem] bg-slate-900 p-5 text-white shadow-xl md:min-w-72"><p className="text-sm font-bold text-white/60">今日战况</p><div className="mt-2 flex items-center gap-3"><div className="text-4xl">{leader.avatar}</div><div><p className="text-2xl font-black">{isTie ? '目前持平' : `${leader.name} 今日领先`}</p><p className="text-sm font-semibold text-white/70">{isTie ? `双方任务完成度都是 ${leader.percent}%` : `任务完成度：${leader.percent}% · 落后者请吃饭：${loser.name}`}</p></div></div></div>
           </div>
         </header>
@@ -326,7 +359,7 @@ export default function IELTSBattleRoom() {
           {tab === 'tasks' && <div className="grid gap-5 lg:grid-cols-2">{PLAYERS.map((player) => <TaskBoard key={player.name} player={player} tasks={taskLists[player.name] || []} draft={taskDrafts[player.name] || ''} isEditing={editingTasks[player.name] || false} selectedIds={selectedTaskIds[player.name] || []} onToggleEdit={toggleEditTasks} onDraftChange={(name, value) => setTaskDrafts((current) => ({ ...current, [name]: value }))} onAddTask={addTask} onUploadProof={uploadTaskProof} onClearProof={clearTaskProof} onViewProof={viewTaskProof} onEditTask={editTask} onToggleSelectTask={toggleSelectTask} onDeleteSelected={deleteSelected} />)}</div>}
           {tab === 'wall' && <div className="rounded-[2rem] border border-white bg-white/75 p-5 shadow-xl shadow-sky-100"><SectionTitle icon="💬" title="双人监督墙" desc="自动读取今日任务完成度" /><div className="space-y-4">{wall.map((item, index) => <div key={index} className="rounded-[1.7rem] border border-slate-100 bg-white p-5 shadow-md"><div className="flex items-start gap-4"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-100 text-3xl">{item.avatar}</div><div><h3 className="text-lg font-black text-slate-900">{item.name}</h3><span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-black text-sky-600">{item.tag}</span><p className="mt-2 text-base font-semibold leading-7 text-slate-600">{item.text}</p></div></div></div>)}</div></div>}
         </main>
-        {proofPreview && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/60 p-4 backdrop-blur-sm"><div className="w-full max-w-2xl overflow-hidden rounded-[2rem] bg-white shadow-2xl"><div className="flex items-start justify-between gap-4 bg-slate-900 p-5 text-white"><div><p className="text-sm font-bold text-white/60">学习证据预览</p><h3 className="mt-1 text-2xl font-black">{proofPreview.playerName} · {proofPreview.taskTitle}</h3><p className="mt-1 text-sm font-semibold text-white/60">文件：{proofPreview.proofName}</p></div><button onClick={() => setProofPreview(null)} className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-black hover:bg-white/20">关闭</button></div><div className="p-5">{proofPreview.proofUrl ? <img src={proofPreview.proofUrl} alt="上传的学习证据" className="max-h-[70vh] w-full rounded-3xl object-contain bg-slate-100" /> : <div className="grid min-h-80 place-items-center rounded-3xl bg-slate-100 p-8 text-center">没有照片链接</div>}</div></div></div>}
+        {proofPreview && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/60 p-4 backdrop-blur-sm"><div className="w-full max-w-3xl overflow-hidden rounded-[2rem] bg-white shadow-2xl"><div className="flex items-start justify-between gap-4 bg-slate-900 p-5 text-white"><div><p className="text-sm font-bold text-white/60">学习证据预览</p><h3 className="mt-1 text-2xl font-black">{proofPreview.playerName} · {proofPreview.taskTitle}</h3><p className="mt-1 text-sm font-semibold text-white/60">{proofPreview.proofName}</p></div><button onClick={() => setProofPreview(null)} className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-black hover:bg-white/20">关闭</button></div><div className="max-h-[78vh] overflow-y-auto p-5">{(proofPreview.proofUrls || (proofPreview.proofUrl ? [proofPreview.proofUrl] : [])).length ? <div className="grid gap-4 md:grid-cols-2">{(proofPreview.proofUrls || [proofPreview.proofUrl]).map((url, index) => <div key={url || index} className="rounded-3xl bg-slate-100 p-2"><img src={url} alt={`上传的学习证据 ${index + 1}`} className="max-h-[60vh] w-full rounded-2xl object-contain" /><p className="mt-2 text-center text-xs font-bold text-slate-500">第 {index + 1} 张</p></div>)}</div> : <div className="grid min-h-80 place-items-center rounded-3xl bg-slate-100 p-8 text-center">没有照片链接</div>}</div></div></div>}
       </div>
     </div>
   );
