@@ -1,0 +1,28 @@
+/* Hide repetitive helper copy and instructional microtext on the front end. */
+
+/* Section subtitles such as upload rules and explanatory descriptions */
+.mb-5.flex.items-center.gap-3 p.text-sm.font-semibold.text-slate-500 {
+  display: none !important;
+}
+
+/* Task-room helper lines under mode/status areas */
+.bg-slate-50 p.text-xs.font-bold.text-slate-500,
+.bg-slate-50 p.text-sm.font-bold.text-slate-600,
+p.text-sm.font-bold.text-slate-600 {
+  display: none !important;
+}
+
+/* Top sync/status message bar; it was mostly operational helper text */
+div[class*="bg-white/80"][class*="text-sm"][class*="shadow"] {
+  display: none !important;
+}
+
+/* Empty-state instructional line, keep the title only */
+.border-dashed p.text-sm.font-bold.text-slate-500 {
+  display: none !important;
+}
+
+/* Upload status chips: keep task title and buttons clean */
+.flex.flex-wrap.items-center.gap-2.text-xs.font-bold.text-slate-500 {
+  margin-top: 0.25rem !important;
+}
